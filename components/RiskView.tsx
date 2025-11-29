@@ -44,7 +44,7 @@ const RiskView: React.FC<RiskViewProps> = ({ risks, onToggleSelection, onGenerat
   const selectedCount = risks.filter(r => r.selected).length;
 
   return (
-    <div className="space-y-4 animate-in slide-in-from-right-4 duration-500 pb-20 md:pb-0">
+    <div className="space-y-4 animate-in slide-in-from-right-4 duration-500 pb-24 md:pb-0">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 text-slate-400" />
@@ -52,7 +52,7 @@ const RiskView: React.FC<RiskViewProps> = ({ risks, onToggleSelection, onGenerat
             Threat Assessment Logs
           </h3>
         </div>
-        <div className="text-xs font-mono text-slate-500">
+        <div className="text-xs font-mono text-slate-500 hidden md:block">
           SELECT MITIGATIONS TO UPDATE PLAN
         </div>
       </div>
@@ -147,28 +147,31 @@ const RiskView: React.FC<RiskViewProps> = ({ risks, onToggleSelection, onGenerat
       </div>
 
       {/* Action Bar */}
-      <div className={`
-        fixed bottom-6 left-1/2 transform -translate-x-1/2 md:relative md:bottom-auto md:left-auto md:transform-none md:mt-8
-        transition-all duration-500 z-50
-        ${selectedCount > 0 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}
-      `}>
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 md:relative md:bottom-auto md:left-auto md:transform-none md:mt-8 z-50 w-full md:w-auto px-4 md:px-0">
         <button
           onClick={onGenerateManifesto}
-          disabled={isGeneratingManifesto}
-          className="bg-emerald-500 text-slate-900 px-8 py-4 rounded-full md:rounded-lg shadow-[0_0_30px_rgba(16,185,129,0.3)] hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3 font-mono font-bold uppercase tracking-wider text-sm mx-auto"
+          disabled={isGeneratingManifesto || selectedCount === 0}
+          className={`
+            w-full md:w-auto px-8 py-4 rounded-full md:rounded-lg shadow-lg flex items-center justify-center gap-3 font-mono font-bold uppercase tracking-wider text-sm mx-auto transition-all duration-300
+            ${selectedCount > 0 
+              ? 'bg-emerald-500 text-slate-900 hover:bg-emerald-400 hover:scale-105 shadow-[0_0_30px_rgba(16,185,129,0.3)]' 
+              : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'}
+          `}
         >
           {isGeneratingManifesto ? (
             <>
               <span className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin"/>
-              Re-calibrating Strategy...
+              Re-calibrating...
             </>
           ) : (
             <>
-              Update Business Plan
-              <span className="bg-slate-900/20 px-2 py-0.5 rounded text-xs">
-                {selectedCount} Selected
-              </span>
-              <ArrowRight className="w-4 h-4" />
+              Initiate Strategic Pivot
+              {selectedCount > 0 && (
+                <span className="bg-slate-900/20 px-2 py-0.5 rounded text-xs ml-1">
+                  {selectedCount} Selected
+                </span>
+              )}
+              <ArrowRight className={`w-4 h-4 ${selectedCount > 0 ? '' : 'opacity-50'}`} />
             </>
           )}
         </button>

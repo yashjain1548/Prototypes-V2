@@ -115,40 +115,144 @@ export const analyzeProject = async (projectDescription: string): Promise<Analys
   }
 };
 
-export const generateManifesto = async (projectName: string, mitigations: string[]): Promise<string> => {
+export const updateProjectStrategy = async (projectName: string, mitigations: string[]): Promise<{ manifesto: string; tasks: Task[] }> => {
   if (!process.env.API_KEY) {
     throw new Error("API Key is missing.");
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+  const systemInstruction = `
+    You are the "Project Launcher" Strategy Engine. 
+    When pivoting a strategy based on new mitigations, be decisive, authoritative, and inspiring.
+    The Manifesto should read like a high-stakes mission briefing.
+    Tone: "Mission Control" leadership. Professional, bold, and clear.
+  `;
+
   const prompt = `
     Project: ${projectName}
 
     Context:
-    The user has reviewed the risks for this project and has explicitly decided to IMPLEMENT the following mitigation strategies to fortify the mission:
+    The user has reviewed the initial risks and has explicitly decided to IMPLEMENT the following mitigation strategies to fortify the mission:
     ${mitigations.map((m, i) => `${i + 1}. ${m}`).join('\n')}
 
-    Task:
-    Rewrite the underlying business plan as a "Strategic Manifesto". 
-    This should be a professional, high-energy, and engaging document (approx 250-300 words).
+    Directives:
     
-    Requirements:
-    - Format: Markdown (use bolding for emphasis).
-    - Tone: Confident, strategic, and "Mission Ready".
-    - Content: State the revised vision. Explicitly mention how the selected mitigation strategies have been integrated into the core workflow to ensure success. 
-    - Structure: Start with a "Mission Directive" statement, followed by the "Operational Pivot" (the changes), and end with a "Success Protocol" summary.
+    1. MANIFESTO (The Pivot): 
+       Rewrite the underlying business plan as a "Strategic Manifesto".
+       - Format: Markdown (use bolding, headers, lists).
+       - Content: State the revised vision. Explicitly mention how the selected mitigation strategies have been integrated into the core workflow.
+       - Structure: "Mission Directive", "Operational Pivot", "Success Protocol".
+
+    2. ATOMIZER (The New Protocol):
+       Generate a NEW set of exactly 10 execution micro-steps (tasks) that specifically implement this REVISED strategy.
+       - These steps must incorporate the selected mitigations (e.g., if they chose to "Hire a consultant", a step should be "Onboard consultant").
+       - Ensure the steps are sequential and actionable.
+
+    Return JSON format containing both the manifesto string and the list of new tasks.
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            manifesto: {
+              type: Type.STRING,
+              description: "The strategic manifesto in Markdown format."
+            },
+            tasks: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  description: { type: Type.STRING, description: "Actionable micro-step description for the new plan" }
+                },
+                required: ["description"]
+              }
+            }
+          },
+          required: ["manifesto", "tasks"]
+        }
+      }
     });
-    
-    return response.text || "Mission parameters updated, but manifesto generation was interrupted.";
+
+    const text = response.text;
+    if (!text) throw new Error("No response generated.");
+
+    const parsed = JSON.parse(text);
+
+    return {
+      manifesto: parsed.manifesto,
+      tasks: parsed.tasks.map((t: any, index: number) => ({
+        id: `updated-task-${index}`,
+        description: t.description,
+        isCompleted: false
+      }))
+    };
+
   } catch (error) {
-    console.error("Manifesto generation failed:", error);
-    throw new Error("Failed to generate manifesto.");
+    console.error("Strategy update failed:", error);
+    throw new Error("Failed to update strategy.");
+  }
+};
+
+export const generateMissionPatch = async (projectName: string): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  // Prompt optimized for "Mission Patch" style
+  const prompt = `
+    Design a circular mission patch logo for a project named "${projectName}".
+    Style Requirements:
+    - High-tech, minimalist vector art.
+    - Dark mode aesthetic (Background: #0f172a).
+    - Accents: Glowing Emerald Green (#10b981) and subtle Cyan.
+    - Abstract geometric shapes representing strategy, speed, and precision.
+    - No text inside the logo itself, just symbols.
+    - Looks like a badge or emblem.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [{ text: prompt }]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
+    });
+
+    // Extract image from response
+    let base64Image = "";
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          base64Image = part.inlineData.data;
+          break;
+        }
+      }
+    }
+
+    if (!base64Image) {
+      throw new Error("No image data received from API.");
+    }
+
+    return `data:image/png;base64,${base64Image}`;
+
+  } catch (error) {
+    console.error("Mission patch generation failed:", error);
+    throw new Error("Failed to generate mission patch.");
   }
 };

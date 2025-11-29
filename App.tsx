@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Shield, List, ArrowLeft, Terminal, LayoutGrid, FileText } from 'lucide-react';
+import { Shield, List, ArrowLeft, Terminal, LayoutGrid, FileText, Hexagon, Sparkles } from 'lucide-react';
 import { AnalysisData, TabState, ViewState } from './types';
 import { DEFAULT_PROJECT } from './constants';
-import { analyzeProject, generateManifesto } from './services/geminiService';
+import { analyzeProject, updateProjectStrategy, generateMissionPatch } from './services/geminiService';
 import InputSection from './components/InputSection';
 import LoadingScreen from './components/LoadingScreen';
 import RiskView from './components/RiskView';
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [data, setData] = useState<AnalysisData>(DEFAULT_PROJECT);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingManifesto, setIsGeneratingManifesto] = useState(false);
+  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async (input: string) => {
@@ -67,14 +68,33 @@ const App: React.FC = () => {
 
     setIsGeneratingManifesto(true);
     try {
-      const manifesto = await generateManifesto(data.projectName, selectedMitigations);
-      setData(prev => ({ ...prev, manifesto }));
+      // Regenerate both the Manifesto AND the Atomizer tasks based on the new strategy
+      const { manifesto, tasks } = await updateProjectStrategy(data.projectName, selectedMitigations);
+      
+      setData(prev => ({ 
+        ...prev, 
+        manifesto,
+        tasks // Replace old tasks with new strategy tasks
+      }));
+      
       setActiveTab('manifesto');
     } catch (err) {
       console.error("Manifesto error", err);
       // Optional: Add toast notification here
     } finally {
       setIsGeneratingManifesto(false);
+    }
+  };
+
+  const handleGenerateLogo = async () => {
+    setIsGeneratingLogo(true);
+    try {
+      const logoUrl = await generateMissionPatch(data.projectName);
+      setData(prev => ({ ...prev, logoUrl }));
+    } catch (err) {
+      console.error("Logo generation error", err);
+    } finally {
+      setIsGeneratingLogo(false);
     }
   };
 
@@ -131,12 +151,46 @@ const App: React.FC = () => {
         {viewState === 'results' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
              
-             {/* Project Title Header */}
-             <div className="mb-10 pb-6 border-b border-slate-800">
-               <h2 className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-2">Target Objective</h2>
-               <h1 className="text-3xl font-bold text-white max-w-4xl leading-tight">
-                 {data.projectName}
-               </h1>
+             {/* Project Title & Logo Header */}
+             <div className="mb-10 pb-6 border-b border-slate-800 flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
+               <div className="flex-1">
+                 <h2 className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-2">Target Objective</h2>
+                 <h1 className="text-3xl font-bold text-white leading-tight">
+                   {data.projectName}
+                 </h1>
+               </div>
+
+               {/* Mission Patch Section */}
+               <div className="flex-shrink-0">
+                  {data.logoUrl ? (
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 bg-emerald-500/30 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
+                      <img 
+                        src={data.logoUrl} 
+                        alt="Mission Patch" 
+                        className="relative w-24 h-24 rounded-full border-2 border-slate-700 bg-slate-900 object-cover shadow-2xl"
+                      />
+                      <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-white/10"></div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleGenerateLogo}
+                      disabled={isGeneratingLogo}
+                      className="group relative flex flex-col items-center justify-center w-24 h-24 rounded-full border-2 border-dashed border-slate-700 bg-slate-900/50 hover:bg-slate-800 hover:border-emerald-500/50 transition-all duration-300"
+                    >
+                      {isGeneratingLogo ? (
+                        <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          <Hexagon className="w-6 h-6 text-slate-600 group-hover:text-emerald-500 transition-colors" />
+                          <span className="text-[10px] font-mono text-slate-500 mt-1 group-hover:text-emerald-400">
+                            GEN PATCH
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
+               </div>
              </div>
 
              {/* Tab Navigation */}

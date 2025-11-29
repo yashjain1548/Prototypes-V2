@@ -20,6 +20,7 @@ export interface AnalysisData {
   risks: Risk[];
   tasks: Task[];
   manifesto?: string; // The generated strategic manifesto
+  logoUrl?: string; // The generated mission patch URL
 }
 
 export type ViewState = 'input' | 'processing' | 'results';

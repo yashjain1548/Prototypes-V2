@@ -2,6 +2,7 @@ import { AnalysisData } from './types';
 
 export const DEFAULT_PROJECT: AnalysisData = {
   projectName: "Global Company Rebrand",
+  logoUrl: undefined,
   risks: [
     {
       id: "r1",
